@@ -7,16 +7,24 @@
 #include <unistd.h>
 #include <dirent.h>
 
+
+char *getFileExtension(const char *filename){
+    char *extension = strrchr(filename, '.');
+    if (extension == NULL) {
+        return "";
+    }
+    return extension + 1;
+}
 void printMenu1() {
     printf("----FILE-MENU----\n");
-    printf("\tt - time of last modification\n");
+    printf("\tm - time of last modification\n");
     printf("\tl - create symbolic link\n");
     printf("\tn - name\n");
     printf("\td - size\n");
     printf("\ta - access rights\n");
     printf("\th - hard link count\n");
-    printf("Please enter your options.\n");
-    printf("The options should be preceded by a '-'\n");
+    printf("Choose your weapon\n");
+    printf("Activate it by typing '-' and the weapon of choice \n");
 }
 
 void printMenu2() {
@@ -25,8 +33,8 @@ void printMenu2() {
     printf("\td - size\n");
     printf("\tn - name\n");
     printf("\ta - access rights\n");
-    printf("Please enter your options.\n");
-    printf("The options should be preceded by a '-'\n");
+    printf("Choose your weapon\n");
+    printf("Activate it by typing '-' and the weapon of choice \n");
 }
 
 void printMenu3() {
@@ -36,8 +44,8 @@ void printMenu3() {
     printf("\tl - delete\n");
     printf("\ta - access rights\n");
     printf("\tt - size of target file\n");
-    printf("Please enter your options.\n");
-    printf("The options should be preceded by a '-'\n");
+    printf("Choose your weapon\n");
+    printf("Activate it by typing '-' and the weapon of choice \n");
 }
 
 void printAccessRights(struct stat status, char *filePath) {
@@ -56,6 +64,7 @@ void printAccessRights(struct stat status, char *filePath) {
         printf("\n");
     }
 }
+
 void processFileOptions(struct stat status, char *filePath) {
     const int MAX_OPTIONS = 5;
     const char* VALID_OPTIONS = "ndhmal";
@@ -64,7 +73,7 @@ void processFileOptions(struct stat status, char *filePath) {
 
     do {
         if (!isValid) {
-            printFileMenu();
+            printMenu1();
         }
         
         if (scanf("%5s", options) != 1) {
@@ -75,14 +84,14 @@ void processFileOptions(struct stat status, char *filePath) {
         int nrOfOptions = strlen(options);
 
         if (nrOfOptions < 2 || options[0] != '-') {
-            printf("Please enter the correct options.\n");
+            printf("U cannot even choose corectly :)) \n");
             isValid = 0;
             continue;
         }
         
         for (int i = 1; i < nrOfOptions; i++) {
             if (strchr(VALID_OPTIONS, options[i]) == NULL) {
-                printf("Please enter the correct options.\n");
+                printf("Can u even see the obtions?.\n");
                 isValid = 0;
                 break;
             }
@@ -127,6 +136,86 @@ void processFileOptions(struct stat status, char *filePath) {
     }
 }
 
+void processDirectoryOptions(struct stat status, char *filePath) {
+    const int MAX_OPTIONS = 3;
+    const char* VALID_OPTIONS = "ndac";
+    char options[MAX_OPTIONS + 1];
+    int isValid = 0;
+
+    do {
+        if (!isValid) {
+            printMenu2();
+        }
+        
+        if (scanf("%3s", options) != 1) {
+            perror("Scanf failed.\n");
+        }
+
+        isValid = 1;
+        int nrOfOptions = strlen(options);
+
+        if (nrOfOptions < 2 || options[0] != '-') {
+             printf("U cannot even choose corectly :)) \n");
+            isValid = 0;
+            continue;
+        }
+        
+        for (int i = 1; i < nrOfOptions; i++) {
+            if (strchr(VALID_OPTIONS, options[i]) == NULL) {
+                printf("Can u even see the obtions?.\n");
+                isValid = 0;
+                break;
+            }
+        }
+    } while (!isValid);
+
+    for (int i = 1; i < strlen(options); i++) {
+        switch (options[i]) {
+            case 'n':
+                printf("Name of directory: %s\n", filePath);
+                break;
+            case 'd':
+                printf("Directory size: %ld bytes\n", status.st_size);
+                break;
+            case 'a':
+                printf("Access rights:\n");
+                printAccessRights(status, filePath);
+                break;
+            case 'c':
+                {
+                    int countC = 0;
+                    DIR* directory = opendir(filePath);
+                    if (directory == NULL) {
+                        perror("Could not open the directory.\n");
+                        break;
+                    }
+
+                    struct dirent *entry;
+                    while ((entry = readdir(directory)) != NULL) { 
+                        struct stat entryStat;
+                        char entryPath[PATH_MAX];
+                        snprintf(entryPath, sizeof(entryPath), "%s/%s", filePath, entry->d_name);
+
+                        if (lstat(entryPath, &entryStat) == -1) {
+                            perror("lstat failed.\n");
+                            break;
+                        } 
+
+                        if (S_ISREG(entryStat.st_mode) && (strcmp(getFileExtension(entry->d_name), "c") == 0)) {
+                            countC++;
+                        }
+                    }
+                    closedir(directory);
+                    printf("The number of C files in the directory is %d.\n", countC);
+                }
+                break;
+            default:
+                printf("Invalid option: %c\n", options[i]);
+                break;
+        }
+    }
+}
+
 void processLinkOptions(struct stat status, char *filePath) {
     const int MAX_OPTIONS = 5;
     const char* VALID_OPTIONS = "ndtal";
@@ -135,7 +224,7 @@ void processLinkOptions(struct stat status, char *filePath) {
 
     do {
         if (!isValid) {
-            printLinkMenu();
+            printMenu3();
         }
         
         if (scanf("%5s", options) != 1) {
@@ -146,14 +235,14 @@ void processLinkOptions(struct stat status, char *filePath) {
         int nrOfOptions = strlen(options);
 
         if (nrOfOptions < 2 || options[0] != '-') {
-            printf("Please enter the correct options.\n");
+            printf("U cannot even choose corectly :)) \n");
             isValid = 0;
             continue;
         }
         
         for (int i = 1; i < nrOfOptions; i++) {
             if (strchr(VALID_OPTIONS, options[i]) == NULL) {
-                printf("Please enter the correct options.\n");
+                printf("Can u even see the obtions?.\n");
                 isValid = 0;
                 break;
             }
@@ -195,6 +284,64 @@ void processLinkOptions(struct stat status, char *filePath) {
     }
 }
 
+int main() {
+    char path[256];
+    struct stat status;
+    DIR *dirp;
+    struct dirent *dp;
+
+    printf("Please enter the file or directory path or link paths: "); 
+    if (scanf("%255s", path) != 1) {
+        perror("Scanf failed.\n");
+        return 1;
+    }
+
+    if (stat(path, &status) != 0) {
+        perror("Failed to get file status.\n");
+        return 1;
+    }
+
+    if (S_ISREG(status.st_mode)) {
+        processFileOptions(status, path);
+    } else if (S_ISDIR(status.st_mode)) {
+        processDirectoryOptions(status, path);
+
+        dirp = opendir(path);
+        if (dirp == NULL) {
+            perror("Failed to open directory.\n");
+            return 1;
+        }
+
+        int cCount = 0;
+        int totalSize = 0;
+        while ((dp = readdir(dirp)) != NULL) {
+            if (dp->d_type == DT_REG && strstr(dp->d_name, ".c") != NULL) {
+                cCount++;
+                char filePath[256];
+               // snprintf(filePath, 256, "%s/%s", path, dp->d_name);
+               snprintf(filePath, PATH_MAX, "%s/%s", path, dp->d_name);
+
+                struct stat fileStatus;
+                if (stat(filePath, &fileStatus) != 0) {
+                    perror("Failed to get file status.\n");
+                    return 1;
+                }
+
+                totalSize += fileStatus.st_size;
+            }
+        }
+        closedir(dirp);
+
+        printf("Number of C files: %d\n", cCount);
+        printf("Total size of C files: %d bytes\n", totalSize);
+    } else if (S_ISLNK(status.st_mode)) {
+        printf("The file is a symbolic link.\n");
+    } else {
+        printf("The file is neither a regular file, a directory, nor a symbolic link.\n");
+    }
+
+    return 0;
+}
 
 
 

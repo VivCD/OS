@@ -7,8 +7,8 @@
 #include <unistd.h>
 #include <dirent.h>
 #include<errno.h>
-
-
+#include <unistd.h>
+#include <unistd.h>
 
 char *getFileExtension(const char *filename){
     char *extension = strrchr(filename, '.');
@@ -286,81 +286,71 @@ void processLinkOptions(struct stat status, char *filePath) {
     }
 }
 
-
-
 int main(int argc, char *argv[]) {
-    if (argc != 4) {
-        printf("Usage: %s file1 file2 file3\n", argv[0]);
-        return 1;
+    if (argc < 2) {
+        printf("Please specify the file path.\n");
+        exit(0);
     }
 
-    for (int i = 1; i < argc; i++) {
-        char path[256];
-        struct stat status;
-        DIR *dirp;
-        struct dirent *dp;
+    char *filePath = argv[1];
+    struct stat status;
 
-        strncpy(path, argv[i], sizeof(path)-1);
-        path[sizeof(path)-1] = '\0'; // Ensure null-termination
-
-        printf("Processing %s\n", path);
-
-        if (lstat(path, &status) != 0) {
-            if (errno == ENOENT) {
-                printf("File or directory not found.\n");
-            } else if (errno == ELOOP) {
-                printf("Symbolic link is broken.\n");
-            } else {
-                perror("Failed to get file status.\n");
-            }
-            return 1;
-        }
-
-        if (S_ISREG(status.st_mode)) {
-            processFileOptions(status, path);
-        } else if (S_ISDIR(status.st_mode)) {
-            processDirectoryOptions(status, path);
-
-            dirp = opendir(path);
-            if (dirp == NULL) {
-                perror("Failed to open directory.\n");
-                return 1;
-            }
-
-            int cCount = 0;
-            int totalSize = 0;
-            while ((dp = readdir(dirp)) != NULL) {
-                if (dp->d_type == DT_REG && strstr(dp->d_name, ".c") != NULL) {
-                    cCount++;
-                    char filePath[256];
-                    snprintf(filePath, PATH_MAX, "%s/%s", path, dp->d_name);
-
-                    struct stat fileStatus;
-                    if (lstat(filePath, &fileStatus) != 0) {
-                        perror("Failed to get file status.\n");
-                        return 1;
-                    }
-
-                    totalSize += fileStatus.st_size;
-                }
-            }
-            closedir(dirp);
-
-            printf("Number of C files: %d\n", cCount);
-            printf("Total size of C files: %d bytes\n", totalSize);
-        } else if (S_ISLNK(status.st_mode)) {
-            char resolved_path[PATH_MAX];
-            if (realpath(path, resolved_path) == NULL) {
-                perror("Failed to resolve symbolic link path.\n");
-                return 1;
-            }
-
-            printf("The file is a symbolic link.\n");
-            printf("Resolved path: %s\n", resolved_path);
-        } else {
-            printf("The file is neither a regular file, a directory, nor a symbolic link.\n");
-        }
+    if (lstat(filePath, &status) == -1) {
+        perror("Failed to get file status.\n");
+        exit(1);
     }
 
+    printf("Successfully opened %s\n", filePath);
+
+    int continueMenu = 1;
+
+    do {
+        int option;
+        printf("\nWhich menu would you like to access:\n");
+        printf("\t1 - File menu\n");
+        printf("\t2 - Directory menu\n");
+        printf("\t3 - Link menu\n");
+        printf("\t0 - Exit program\n");
+
+        if (scanf("%d", &option) != 1) {
+            perror("Scanf failed.\n");
+            continue;
+        }
+
+        switch (option) {
+            case 1:
+                processFileOptions(status, filePath);
+                printf("\nDo you want to continue with the file menu?\n");
+                printf("\t1 - Yes\n");
+                printf("\t2 - No, go to the next menu\n");
+                printf("\t0 - Exit program\n");
+                scanf("%d", &continueMenu);
+                break;
+            case 2:
+                processDirectoryOptions(status, filePath);
+                printf("\nDo you want to continue with the directory menu?\n");
+                printf("\t1 - Yes\n");
+                printf("\t2 - No, go to the next menu\n");
+                printf("\t0 - Exit program\n");
+                scanf("%d", &continueMenu);
+                break;
+            case 3:
+                processLinkOptions(status, filePath);
+                printf("\nDo you want to continue with the link menu?\n");
+                printf("\t1 - Yes\n");
+                printf("\t2 - No, exit the program\n");
+                printf("\t0 - Exit program\n");
+                scanf("%d", &continueMenu);
+                break;
+            case 0:
+                continueMenu = 0;
+                break;
+            default:
+                printf("Invalid option: %d\n", option);
+                break;
+        }
+    } while (continueMenu);
+    
     return 0;
 }
+

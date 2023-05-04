@@ -6,6 +6,8 @@
 #include <time.h>
 #include <unistd.h>
 #include <dirent.h>
+#include<errno.h>
+
 
 
 char *getFileExtension(const char *filename){
@@ -284,64 +286,81 @@ void processLinkOptions(struct stat status, char *filePath) {
     }
 }
 
-int main() {
-    char path[256];
-    struct stat status;
-    DIR *dirp;
-    struct dirent *dp;
 
-    printf("Please enter the file or directory path or link paths: "); 
-    if (scanf("%255s", path) != 1) {
-        perror("Scanf failed.\n");
+
+int main(int argc, char *argv[]) {
+    if (argc != 4) {
+        printf("Usage: %s file1 file2 file3\n", argv[0]);
         return 1;
     }
 
-    if (stat(path, &status) != 0) {
-        perror("Failed to get file status.\n");
-        return 1;
-    }
+    for (int i = 1; i < argc; i++) {
+        char path[256];
+        struct stat status;
+        DIR *dirp;
+        struct dirent *dp;
 
-    if (S_ISREG(status.st_mode)) {
-        processFileOptions(status, path);
-    } else if (S_ISDIR(status.st_mode)) {
-        processDirectoryOptions(status, path);
+        strncpy(path, argv[i], sizeof(path)-1);
+        path[sizeof(path)-1] = '\0'; // Ensure null-termination
 
-        dirp = opendir(path);
-        if (dirp == NULL) {
-            perror("Failed to open directory.\n");
+        printf("Processing %s\n", path);
+
+        if (lstat(path, &status) != 0) {
+            if (errno == ENOENT) {
+                printf("File or directory not found.\n");
+            } else if (errno == ELOOP) {
+                printf("Symbolic link is broken.\n");
+            } else {
+                perror("Failed to get file status.\n");
+            }
             return 1;
         }
 
-        int cCount = 0;
-        int totalSize = 0;
-        while ((dp = readdir(dirp)) != NULL) {
-            if (dp->d_type == DT_REG && strstr(dp->d_name, ".c") != NULL) {
-                cCount++;
-                char filePath[256];
-               // snprintf(filePath, 256, "%s/%s", path, dp->d_name);
-               snprintf(filePath, PATH_MAX, "%s/%s", path, dp->d_name);
+        if (S_ISREG(status.st_mode)) {
+            processFileOptions(status, path);
+        } else if (S_ISDIR(status.st_mode)) {
+            processDirectoryOptions(status, path);
 
-                struct stat fileStatus;
-                if (stat(filePath, &fileStatus) != 0) {
-                    perror("Failed to get file status.\n");
-                    return 1;
-                }
-
-                totalSize += fileStatus.st_size;
+            dirp = opendir(path);
+            if (dirp == NULL) {
+                perror("Failed to open directory.\n");
+                return 1;
             }
-        }
-        closedir(dirp);
 
-        printf("Number of C files: %d\n", cCount);
-        printf("Total size of C files: %d bytes\n", totalSize);
-    } else if (S_ISLNK(status.st_mode)) {
-        printf("The file is a symbolic link.\n");
-    } else {
-        printf("The file is neither a regular file, a directory, nor a symbolic link.\n");
+            int cCount = 0;
+            int totalSize = 0;
+            while ((dp = readdir(dirp)) != NULL) {
+                if (dp->d_type == DT_REG && strstr(dp->d_name, ".c") != NULL) {
+                    cCount++;
+                    char filePath[256];
+                    snprintf(filePath, PATH_MAX, "%s/%s", path, dp->d_name);
+
+                    struct stat fileStatus;
+                    if (lstat(filePath, &fileStatus) != 0) {
+                        perror("Failed to get file status.\n");
+                        return 1;
+                    }
+
+                    totalSize += fileStatus.st_size;
+                }
+            }
+            closedir(dirp);
+
+            printf("Number of C files: %d\n", cCount);
+            printf("Total size of C files: %d bytes\n", totalSize);
+        } else if (S_ISLNK(status.st_mode)) {
+            char resolved_path[PATH_MAX];
+            if (realpath(path, resolved_path) == NULL) {
+                perror("Failed to resolve symbolic link path.\n");
+                return 1;
+            }
+
+            printf("The file is a symbolic link.\n");
+            printf("Resolved path: %s\n", resolved_path);
+        } else {
+            printf("The file is neither a regular file, a directory, nor a symbolic link.\n");
+        }
     }
 
     return 0;
 }
-
-
-

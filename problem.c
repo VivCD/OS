@@ -302,10 +302,11 @@ int main(int argc, char *argv[]) {
 
     printf("Successfully opened %s\n", filePath);
 
-    int continueMenu = 1;
+    int continueMenu = 2;
 
     do {
-        int option;
+        int option; 
+        if(continueMenu==2){
         printf("\nWhich menu would you like to access:\n");
         printf("\t1 - File menu\n");
         printf("\t2 - Directory menu\n");
@@ -315,6 +316,7 @@ int main(int argc, char *argv[]) {
         if (scanf("%d", &option) != 1) {
             perror("Scanf failed.\n");
             continue;
+        }
         }
 
         switch (option) {

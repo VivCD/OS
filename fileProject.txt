@@ -1,3 +1,0 @@
-paths: realpath fileProject.txt: /root/OS/fileProject.txt
-       find / -type d -name "newTestingDirectory":   /root/OS/newTestingDirectory
-       readlink -f  ~/linkProject:   /root/linkProject

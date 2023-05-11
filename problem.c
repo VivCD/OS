@@ -9,6 +9,7 @@
 #include<errno.h>
 #include <unistd.h>
 #include <unistd.h>
+#include<sys/types.h>
 
 char *getFileExtension(const char *filename){
     char *extension = strrchr(filename, '.');
@@ -274,7 +275,7 @@ void processLinkOptions(struct stat status, char *filePath) {
             case 'a':
                 printf("Access rights:\n");
                 printAccessRights(status, filePath);
-                break;
+               break;
             case 'l':
                 printf("Deleting link...\n");
                 if (unlink(filePath) == -1) {
@@ -288,12 +289,13 @@ void processLinkOptions(struct stat status, char *filePath) {
                 break;
         }
     }
+    exit(33);
 }
 
 int main(int argc, char *argv[]) {
     if (argc < 1) {
         printf("remember that this fking project has to do something with somethinggggg \n ");
-        exit(0);
+        exit(78);
     }
 
      for (int i = 1; i < argc; i++) 
@@ -311,36 +313,9 @@ int main(int argc, char *argv[]) {
         {
             case S_IFREG:
               {
-                int pipefd[2];
-                if (pipe(pipefd) == -1) {
-                     perror("pipe");
-                     exit(EXIT_FAILURE);
-                 }
-                 pid_t pidreg1 = fork();
-                 if (pidreg1 == 0) {
                     // Child process for file options
-                     processFileOptions(status, filePath);
-                     break;
-                   }
-                 pid_t pidreg2 = fork();
-                 if (pidreg2 == 0) {
-                       if ((strlen(filePath) - 1) == 'c' && (strlen(filePath) - 2)== '.') {
-                            close(pipefd[0]);               // Close read end of pipe
-                            dup2(pipefd[1], STDOUT_FILENO); // Redirect standard output to write end of pipe
-                            close(pipefd[1]);               // Close write end of pipe
-                            char scriptname[10] = "script.sh";
-                            execlp("bash", "bash", scriptname, filePath, NULL);
-                            exit(EXIT_FAILURE);
-                          } 
-                         else {
-                        char scriptname1[10] = "script1.sh";
-                        execlp("bash", "bash", scriptname1, filePath, NULL);
-                        exit(EXIT_FAILURE);
-
-                           }
-                     }
+                    processFileOptions(status, filePath);
                break;
-    
              }
             
             
@@ -353,20 +328,71 @@ int main(int argc, char *argv[]) {
                }
             case S_IFLNK:
                {
-             
+               pid_t pid_link=fork();
+               if(pid_link<0){
+                perror("no process was created");
+                exit(12);
+                }
+                else if(pid_link==0){
                     // Child process for file options
-                    processLinkOptions(status, filePath);
-                    break;
+                    processLinkOptions(status, filePath); 
+                    printf("aici dau exist");
+                   // exit(23);
+                   // break;
+                    
                }
-        
-        } 
-    }
-   
+               else {
+                     pid_t pid_changeAcces = fork();
+                     if(pid_changeAcces<0){
+                         perror("no process was created");
+                          exit(14);
+                      }
+                      if(pid_changeAcces == 0){
+                         // get path of target file
+                       //  printf("am intrat");
+                         char targetPath[1024];
+                          ssize_t len = readlink(filePath, targetPath, sizeof(targetPath) - 1);
+                          if(len == -1){
+                              perror("readlink failed");
+                              exit(18);
+                               }
+                               targetPath[len] = '\0';
 
-    
-       
-    
+                              // change permissions of target file
+                           if(chmod(targetPath, S_IRUSR | S_IWUSR | S_IXUSR | S_IRGRP | S_IWGRP | S_IXGRP | S_IROTH | S_IWOTH | S_IXOTH) == -1){
+                               perror("chmod failed");
+                               exit(18);
+                               }
+                            // exit(20);
+                      }
+                
+                 
+                 int status;
+                 waitpid(pid_link,&status,0);
+                        if(WIFEXITED(status)){
+                            printf("\n");
+                            printf("child process exited with status de campion %d \n",WEXITSTATUS(status));
+                          // exit(8); 
+                            
+                        }
+                        else{
+                             printf("\n");
+                             printf("child process o luat o pe aratura \n");
+                            // exit(6);
+                        }
+                    
+                 } break;
+                 }
+              
+            default: 
+            printf("we don t know ce cacat de file e asta");
+            break;
+    } 
+             } 
+        
+   
     return 0;
 }
+
 
 

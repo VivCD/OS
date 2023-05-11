@@ -338,7 +338,7 @@ int main(int argc, char *argv[]) {
                 else {
                     int status;
                     waitpid(pid, &status, 0);
-                    printf("\nDo you want to continue with the ile menu?\n");
+                    printf("\nDo you want to continue with the file menu?\n");
                     printf("\t1 - Yes\n");
                     printf("\t2 - No, go to the next menu\n");
                     printf("\t0 - Exit program\n");
@@ -408,7 +408,8 @@ int main(int argc, char *argv[]) {
      } 
 
     
-        return 0;
-    }while (continueMenu);
+       
+    }while (continueMenu); 
+    return 0;
 }
 

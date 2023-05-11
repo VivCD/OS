@@ -1,6 +1,6 @@
 readlink -f file.txt
 /root/OS/file.txt 
 
-readlink -f symlinkName /root/OS/file.txt
+readlink -f symlinkName /root/OS/simLink
 pwd
 /root/OS

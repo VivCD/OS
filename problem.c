@@ -67,12 +67,13 @@ void printAccessRights(struct stat status, char *filePath) {
     }
 }
 
-void processFileOptions(struct stat status, char *filePath) {
+void processFileOptions(struct stat status, char *filePath) { // merge cu -nhsa type of input but still not work is -mna sak does not display error messege
     const int MAX_OPTIONS = 5;
     const char* VALID_OPTIONS = "ndhmal";
     char options[MAX_OPTIONS + 1];
     int isValid = 0;
-
+    char *fileName;
+    fileName=strrchr(filePath,'/'); //fa cu strcat sa scapi de prima linie
     do {
         if (!isValid) {
             printMenu1();
@@ -101,9 +102,10 @@ void processFileOptions(struct stat status, char *filePath) {
     } while (!isValid);
 
     for (int i = 1; i < strlen(options); i++) {
+    
         switch (options[i]) {
             case 'n':
-                printf("Name of file: %s\n", filePath);
+                printf("Name of file: %s\n",fileName);
                 break;
             case 'd':
                 printf("File size: %ld bytes\n", status.st_size);
@@ -143,7 +145,8 @@ void processDirectoryOptions(struct stat status, char *filePath) {
     const char* VALID_OPTIONS = "ndac";
     char options[MAX_OPTIONS + 1];
     int isValid = 0;
-
+    char *dirName;
+    dirName=strrchr(filePath,'/');
     do {
         if (!isValid) {
             printMenu2();
@@ -174,7 +177,7 @@ void processDirectoryOptions(struct stat status, char *filePath) {
     for (int i = 1; i < strlen(options); i++) {
         switch (options[i]) {
             case 'n':
-                printf("Name of directory: %s\n", filePath);
+                printf("Name of directory: %s\n", dirName);
                 break;
             case 'd':
                 printf("Directory size: %ld bytes\n", status.st_size);
@@ -223,7 +226,8 @@ void processLinkOptions(struct stat status, char *filePath) {
     const char* VALID_OPTIONS = "ndtal";
     char options[MAX_OPTIONS + 1];
     int isValid = 0;
-
+    char *linkName;
+    linkName=strrchr(filePath,'/');
     do {
         if (!isValid) {
             printMenu3();
@@ -254,7 +258,7 @@ void processLinkOptions(struct stat status, char *filePath) {
     for (int i = 1; i < strlen(options); i++) {
         switch (options[i]) {
             case 'n':
-                printf("Name of link: %s\n", filePath);
+                printf("Name of link: %s\n", linkName);
                 break;
             case 'd':
                 printf("Link size: %ld bytes\n", status.st_size);
@@ -287,129 +291,82 @@ void processLinkOptions(struct stat status, char *filePath) {
 }
 
 int main(int argc, char *argv[]) {
-    if (argc < 2) {
-        printf("Please specify the file path.\n");
+    if (argc < 1) {
+        printf("remember that this fking project has to do something with somethinggggg \n ");
         exit(0);
     }
 
-    char *filePath = argv[1];
-    struct stat status;
-
-    if (lstat(filePath, &status) == -1) {
+     for (int i = 1; i < argc; i++) 
+     {
+        char* filePath = argv[i];
+        struct stat status;
+        
+        if (lstat(filePath, &status) == -1) {
         perror("Failed to get file status.\n");
         exit(1);
     }
 
     printf("Successfully opened %s\n", filePath);
-
-    int continueMenu = 2;
-
-    do {
-        int option; 
-        if(continueMenu==2)
+        switch (status.st_mode & S_IFMT) 
         {
-            printf("\nWhich menu would you like to access:\n");
-            printf("\t1 - File menu\n");
-            printf("\t2 - Directory menu\n");
-            printf("\t3 - Link menu\n");
-            printf("\t0 - Exit program\n");
-
-             if (scanf("%d", &option) != 1) {
-                perror("Scanf failed.\n");
-                continue;
-                }
-        } 
-
-        switch (option) {
-            case 1:
+            case S_IFREG:
               {
-                 pid_t pid = fork();
-
-                if (pid == -1) {
-                    perror("Failed to fork.\n");
-                    continue;
-                }
-
-                if (pid == 0) {
+                int pipefd[2];
+                if (pipe(pipefd) == -1) {
+                     perror("pipe");
+                     exit(EXIT_FAILURE);
+                 }
+                 pid_t pidreg1 = fork();
+                 if (pidreg1 == 0) {
                     // Child process for file options
-                    processFileOptions(status, filePath);
-                    exit(0);
-                }
-                else {
-                    int status;
-                    waitpid(pid, &status, 0);
-                    printf("\nDo you want to continue with the file menu?\n");
-                    printf("\t1 - Yes\n");
-                    printf("\t2 - No, go to the next menu\n");
-                    printf("\t0 - Exit program\n");
-                    scanf("%d", &continueMenu);
-                }
-                break;
-              }
-            case 2:
+                     processFileOptions(status, filePath);
+                     break;
+                   }
+                 pid_t pidreg2 = fork();
+                 if (pidreg2 == 0) {
+                       if ((strlen(filePath) - 1) == 'c' && (strlen(filePath) - 2)== '.') {
+                            close(pipefd[0]);               // Close read end of pipe
+                            dup2(pipefd[1], STDOUT_FILENO); // Redirect standard output to write end of pipe
+                            close(pipefd[1]);               // Close write end of pipe
+                            char scriptname[10] = "script.sh";
+                            execlp("bash", "bash", scriptname, filePath, NULL);
+                            exit(EXIT_FAILURE);
+                          } 
+                         else {
+                        char scriptname1[10] = "script1.sh";
+                        execlp("bash", "bash", scriptname1, filePath, NULL);
+                        exit(EXIT_FAILURE);
+
+                           }
+                     }
+               break;
+    
+             }
+            
+            
+            case S_IFDIR:
               {
-              pid_t pid = fork();
-
-                if (pid == -1) {
-                    perror("Failed to fork.\n");
-                    continue;
-                }
-
-                if (pid == 0) {
+            
                     // Child process for file options
                    processDirectoryOptions(status, filePath);
-                    exit(0);
-                }
-                else {
-                int status;
-                waitpid(pid, &status, 0);
-              //  processDirectoryOptions(status, filePath);
-                printf("\nDo you want to continue with the directory menu?\n");
-                printf("\t1 - Yes\n");
-                printf("\t2 - No, go to the next menu\n");
-                printf("\t0 - Exit program\n");
-                scanf("%d", &continueMenu);
-                }
-                break;
+               
                }
-            case 3:
+            case S_IFLNK:
                {
-              pid_t pid = fork();
-
-                if (pid == -1) {
-                    perror("Failed to fork.\n");
-                    continue;
-                }
-
-                if (pid == 0) {
+             
                     // Child process for file options
                     processLinkOptions(status, filePath);
-                    exit(0);
-                }
-                else {
-                int status;
-                waitpid(pid, &status, 0);
-                //processLinkOptions(status, filePath);
-                printf("\nDo you want to continue with the link menu?\n");
-                printf("\t1 - Yes\n");
-                printf("\t2 - No, exit the program\n");
-                printf("\t0 - Exit program\n");
-                scanf("%d", &continueMenu);
-                }
-                break;
+                    break;
                }
-            case 0:
-                continueMenu = 0;
-                break;
-            default:
-                printf("Invalid option: %d\n", option);
-                break;
-               
-     } 
+        
+        } 
+    }
+   
 
     
        
-    }while (continueMenu); 
+    
     return 0;
 }
+
 

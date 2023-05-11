@@ -321,7 +321,7 @@ int main(int argc, char *argv[]) {
             
             case S_IFDIR:
               {
-            
+                // pid_t pid_dir=
                     // Child process for file options
                    processDirectoryOptions(status, filePath);
                

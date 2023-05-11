@@ -139,6 +139,7 @@ void processFileOptions(struct stat status, char *filePath) { // merge cu -nhsa 
                 break;
         }
     }
+    exit(1);
 }
 
 void processDirectoryOptions(struct stat status, char *filePath) {
@@ -148,6 +149,7 @@ void processDirectoryOptions(struct stat status, char *filePath) {
     int isValid = 0;
     char *dirName;
     dirName=strrchr(filePath,'/');
+    dirName=dirName+1;
     do {
         if (!isValid) {
             printMenu2();
@@ -220,6 +222,7 @@ void processDirectoryOptions(struct stat status, char *filePath) {
                 break;
         }
     }
+    exit(2);
 }
 
 void processLinkOptions(struct stat status, char *filePath) {
@@ -289,7 +292,7 @@ void processLinkOptions(struct stat status, char *filePath) {
                 break;
         }
     }
-    exit(33);
+    exit(3);
 }
 
 int main(int argc, char *argv[]) {
@@ -321,78 +324,111 @@ int main(int argc, char *argv[]) {
             
             case S_IFDIR:
               {
-                // pid_t pid_dir=
+                 pid_t pid_dir=fork();
+                 if(pid_dir < 0){
+                      perror("no process was created for dir");
+                      exit(8);
+                   }
+                 else if(pid_dir == 0){
                     // Child process for file options
-                   processDirectoryOptions(status, filePath);
-               
+                     processDirectoryOptions(status, filePath);
+                  }
+                 else{
+                    pid_t pid_make=fork();
+                    if(pid_make < 0){
+                        perror("no process was created for sec child dir");
+                          exit(9);
+                     }
+                    if(pid_make == 0){
+                        char *dirName2;
+                        dirName2=strrchr(filePath,'/');
+                        dirName2=dirName2+1;
+                        char *cmd = "touch";
+                        char filenameDir[strlen(dirName2) + 10];
+                        sprintf(filenameDir, "%s_file.txt", dirName2);
+                        execlp(cmd, cmd, filenameDir, (char *) NULL);
+                        exit(9);
+                    }
+                    else {
+                        int statusDIR;
+                        waitpid(pid_dir,&statusDIR,0);
+                      if(WIFEXITED(statusDIR)){
+                         printf("\n");
+                         printf("child process la dir exited with status de campion %d \n",WEXITSTATUS(statusDIR));
+                         
+                            
+                        }
+                      else{
+                            printf("\n");
+                           printf("child process la dir o luat o pe aratura \n");
+                        }
+                    
+                          
+                     } 
+                   break;
+                 }
                }
             case S_IFLNK:
                {
-               pid_t pid_link=fork();
-               if(pid_link<0){
-                perror("no process was created");
-                exit(12);
-                }
-                else if(pid_link==0){
+                 pid_t pid_link=fork();
+                 if(pid_link<0){
+                   perror("no process was created for links");
+                   exit(10);
+                  }
+                 else if(pid_link == 0){
                     // Child process for file options
                     processLinkOptions(status, filePath); 
                     printf("aici dau exist");
-                   // exit(23);
-                   // break;
-                    
-               }
-               else {
+                  }
+                 else {
                      pid_t pid_changeAcces = fork();
                      if(pid_changeAcces<0){
-                         perror("no process was created");
-                          exit(14);
-                      }
-                      if(pid_changeAcces == 0){
-                         // get path of target file
-                       //  printf("am intrat");
-                         char targetPath[1024];
+                         perror("no process was created for sec child symlink");
+                          exit(11);
+                         }  
+                     if(pid_changeAcces == 0){
+                          // get path of target file
+                          //  printf("am intrat");
+                          char targetPath[1024];
                           ssize_t len = readlink(filePath, targetPath, sizeof(targetPath) - 1);
                           if(len == -1){
                               perror("readlink failed");
-                              exit(18);
+                              exit(12);
                                }
                                targetPath[len] = '\0';
 
                               // change permissions of target file
                            if(chmod(targetPath, S_IRUSR | S_IWUSR | S_IXUSR | S_IRGRP | S_IWGRP | S_IXGRP | S_IROTH | S_IWOTH | S_IXOTH) == -1){
                                perror("chmod failed");
-                               exit(18);
+                               exit(13);
                                }
                             // exit(20);
-                      }
-                
-                 
-                 int status;
-                 waitpid(pid_link,&status,0);
-                        if(WIFEXITED(status)){
-                            printf("\n");
-                            printf("child process exited with status de campion %d \n",WEXITSTATUS(status));
-                          // exit(8); 
+                        }
+                    else{
+                      int statusLink;
+                      waitpid(pid_link,&statusLink,0);
+                      if(WIFEXITED(statusLink)){
+                         printf("\n");
+                         printf("child process la symlink exited with status de campion %d \n",WEXITSTATUS(statusLink)); 
+                        }
+                      else{
+                             printf("\n");
+                             printf("child process la symlinks o luat o pe aratura \n");
                             
                         }
-                        else{
-                             printf("\n");
-                             printf("child process o luat o pe aratura \n");
-                            // exit(6);
-                        }
                     
-                 } break;
-                 }
+                     } 
+                 break;
+               }
               
             default: 
             printf("we don t know ce cacat de file e asta");
             break;
-    } 
              } 
+        } 
         
-   
     return 0;
 }
-
+}
 
 

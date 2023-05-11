@@ -306,53 +306,109 @@ int main(int argc, char *argv[]) {
 
     do {
         int option; 
-        if(continueMenu==2){
-        printf("\nWhich menu would you like to access:\n");
-        printf("\t1 - File menu\n");
-        printf("\t2 - Directory menu\n");
-        printf("\t3 - Link menu\n");
-        printf("\t0 - Exit program\n");
+        if(continueMenu==2)
+        {
+            printf("\nWhich menu would you like to access:\n");
+            printf("\t1 - File menu\n");
+            printf("\t2 - Directory menu\n");
+            printf("\t3 - Link menu\n");
+            printf("\t0 - Exit program\n");
 
-        if (scanf("%d", &option) != 1) {
-            perror("Scanf failed.\n");
-            continue;
-        }
-        }
+             if (scanf("%d", &option) != 1) {
+                perror("Scanf failed.\n");
+                continue;
+                }
+        } 
 
         switch (option) {
             case 1:
-                processFileOptions(status, filePath);
-                printf("\nDo you want to continue with the file menu?\n");
-                printf("\t1 - Yes\n");
-                printf("\t2 - No, go to the next menu\n");
-                printf("\t0 - Exit program\n");
-                scanf("%d", &continueMenu);
+              {
+                 pid_t pid = fork();
+
+                if (pid == -1) {
+                    perror("Failed to fork.\n");
+                    continue;
+                }
+
+                if (pid == 0) {
+                    // Child process for file options
+                    processFileOptions(status, filePath);
+                    exit(0);
+                }
+                else {
+                    int status;
+                    waitpid(pid, &status, 0);
+                    printf("\nDo you want to continue with the file menu?\n");
+                    printf("\t1 - Yes\n");
+                    printf("\t2 - No, go to the next menu\n");
+                    printf("\t0 - Exit program\n");
+                    scanf("%d", &continueMenu);
+                }
                 break;
+              }
             case 2:
-                processDirectoryOptions(status, filePath);
+              {
+              pid_t pid = fork();
+
+                if (pid == -1) {
+                    perror("Failed to fork.\n");
+                    continue;
+                }
+
+                if (pid == 0) {
+                    // Child process for file options
+                   processDirectoryOptions(status, filePath);
+                    exit(0);
+                }
+                else {
+                int status;
+                waitpid(pid, &status, 0);
+              //  processDirectoryOptions(status, filePath);
                 printf("\nDo you want to continue with the directory menu?\n");
                 printf("\t1 - Yes\n");
                 printf("\t2 - No, go to the next menu\n");
                 printf("\t0 - Exit program\n");
                 scanf("%d", &continueMenu);
+                }
                 break;
+               }
             case 3:
-                processLinkOptions(status, filePath);
+               {
+              pid_t pid = fork();
+
+                if (pid == -1) {
+                    perror("Failed to fork.\n");
+                    continue;
+                }
+
+                if (pid == 0) {
+                    // Child process for file options
+                    processLinkOptions(status, filePath);
+                    exit(0);
+                }
+                else {
+                int status;
+                waitpid(pid, &status, 0);
+                //processLinkOptions(status, filePath);
                 printf("\nDo you want to continue with the link menu?\n");
                 printf("\t1 - Yes\n");
                 printf("\t2 - No, exit the program\n");
                 printf("\t0 - Exit program\n");
                 scanf("%d", &continueMenu);
+                }
                 break;
+               }
             case 0:
                 continueMenu = 0;
                 break;
             default:
                 printf("Invalid option: %d\n", option);
                 break;
-        }
-    } while (continueMenu);
+               
+     } 
+
     
-    return 0;
+        return 0;
+    }while (continueMenu);
 }
 

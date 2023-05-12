@@ -74,7 +74,8 @@ void processFileOptions(struct stat status, char *filePath) { // merge cu -nhsa 
     char options[MAX_OPTIONS + 1];
     int isValid = 0;
     char *fileName;
-    fileName=strrchr(filePath,'/'); //fa cu strcat sa scapi de prima linie
+    fileName=strrchr(filePath,'/'); 
+    fileName=fileName+1;
     do {
         if (!isValid) {
             printMenu1();
@@ -139,7 +140,7 @@ void processFileOptions(struct stat status, char *filePath) { // merge cu -nhsa 
                 break;
         }
     }
-    exit(1);
+   // exit(1);
 }
 
 void processDirectoryOptions(struct stat status, char *filePath) {
@@ -294,6 +295,29 @@ void processLinkOptions(struct stat status, char *filePath) {
     }
     exit(3);
 }
+int count_lines(const char* filePath) 
+ {
+    FILE* file = fopen(filePath, "r");
+    if (file == NULL) 
+    {
+        printf("Unable to open file '%s'\n", filePath);
+        return -1;
+    }
+
+    int lines = 0;
+    char c;
+    while ((c = fgetc(file)) != EOF) 
+    {
+        if (c == '\n') 
+        {
+            lines++;
+        }
+    }
+
+    fclose(file);
+    return lines;
+}
+
 
 int main(int argc, char *argv[]) {
     if (argc < 1) {
@@ -322,16 +346,36 @@ int main(int argc, char *argv[]) {
                       exit(4);
                    }
                 else if(pid_file == 0){
+                     char *fileName2;
+                        fileName2=strrchr(filePath,'/');
+                        fileName2=fileName2+1;
                     // Child process for file options
                     processFileOptions(status, filePath);
-                 }
+                    int lines = count_lines(filePath);
+                    if (lines >= 0) 
+                    {
+                        printf("File '%s' has %d lines\n", fileName2, lines);
+                    }
+                    exit(11);
+                }
+                 
                 else{
-                    // partea de la files...m ai complicata
+                     int statusFile;
+                      waitpid(pid_file,&statusFile,0);
+                      if(WIFEXITED(statusFile)){
+                         printf("\n");
+                         printf("child process la files exited with status de campion %d \n",WEXITSTATUS(statusFile)); 
+                        }
+                      else{
+                             printf("\n");
+                             printf("child process la file  o luat o pe aratura \n");
+                            
+                        }
                 }
 
-               break;
-             }
-            
+               } break;
+             
+        
             
             case S_IFDIR:
               {

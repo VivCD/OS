@@ -315,9 +315,20 @@ int main(int argc, char *argv[]) {
         switch (status.st_mode & S_IFMT) 
         {
             case S_IFREG:
-              {
+              { 
+                pid_t pid_file=fork();
+                 if(pid_file < 0){
+                      perror("no process was created for files");
+                      exit(4);
+                   }
+                else if(pid_file == 0){
                     // Child process for file options
                     processFileOptions(status, filePath);
+                 }
+                else{
+                    // partea de la files...m ai complicata
+                }
+
                break;
              }
             

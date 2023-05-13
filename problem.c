@@ -418,71 +418,63 @@ int main(int argc, char *argv[]) {
                     else
                     {
                         pid_count++;
-                        //printf("count %d",pid_count_reg);
-                        pid_t wpid;
                         int statusFile;
-                        for( int i = 0; i < pid_count; i++)
-                        {
-                            wpid = wait(&statusFile);
-                            if (WIFEXITED(statusFile))
-                            {
-                                printf("\n");
-                                printf("Child process with PID %d exited with status %d\n", wpid, WEXITSTATUS(statusFile));
-                            }
-                            else
-                                {
-                                    printf("\n");
-                                    printf("Child process  with PID %d did not exit normally\n", wpid);
-                                }     
-                        }
+                        int nr_errors = 0;
+                        int nr_warnings = 0;
+                        pid_t wpid;
 
-                        if( close(pipefd[1]) == -1)
-                        {
-                            perror("error - pipe/write");
-                            exit(10);
-                        } 
+                        for (int i = 0; i < pid_count; i++) {
+                          wpid = wait(&statusFile);
+                           if (WIFEXITED(statusFile)) {
+                                   printf("\n");
+                                   printf("Child process with PID %d exited with status %d\n", wpid, WEXITSTATUS(statusFile));
+                          } else {
+                                   printf("\n");
+                                   printf("Child process  with PID %d did not exit normally\n", wpid);
+                             }
+                          int nr = WEXITSTATUS(statusFile);
+                           nr_errors += nr / 10;
+                           nr_warnings += nr % 10;
+                         }
+
+                        if (close(pipefd[1]) == -1) {
+                           perror("error - pipe/write");
+                           exit(10);
+                         }
 
                         char buffer[BUFFER_SIZE];
-                       
-                        int i;
-                        for(i = 0; i <= 1; i++) 
-                        {
-                            char c;
-                            read(pipefd[0], &c, 1);
-                            buffer[i] = c;
-
-                        }
-                        buffer[i] = '\0';
-                        //printf("%s\n", buffer);
-
-                        int nr = atoi(buffer);
-                        int nr_errors = nr / 10;
-                        int nr_warnings = nr % 10;
-                        int grade;
-                        if (nr_errors == 0 && nr_warnings == 0)
-                                grade = 10;
-                        else if (nr_errors == 0 && nr_warnings > 10)
-                                grade = 2;
-                        else if (nr_errors == 0 && nr_warnings < 10)
-                                grade = 2 + 8 * (10 - nr_warnings) / 10;
-                        else if (nr_errors > 0)
-                                grade = 1;
-
-                        if( close(pipefd[0]) )
-                        {
+                        int len = read(pipefd[0], buffer, BUFFER_SIZE - 1);
+                        if (len == -1) {
                             perror("error - pipe/read");
                             exit(11);
                         }
-                        //printf("Code score for %s: %d errors, %d warnings\n", filename, nr_errors, nr_warnings);
+                        buffer[len] = '\0';
 
-                        char gradeString[100];
-                        sprintf(gradeString, "Grade for file %s is: %d\n", fileName2, grade);
-                        strcat(gradeString, "\0");
-                        write(fp, gradeString, strlen(gradeString));
-                    }
+                        int grade;
+                        if (nr_errors == 0 && nr_warnings == 0) {
+                            grade = 10;
+                        } else if (nr_errors == 0 && nr_warnings > 10) {
+                           grade = 2;
+                        } else if (nr_errors == 0 && nr_warnings < 10) {
+                           grade = 2 + 8 * (10 - nr_warnings) / 10;
+                        } else if (nr_errors > 0) {
+                           grade = 1;
+                        }
+
+                        if (close(pipefd[0]) == -1) {
+                        perror("error - pipe/read");
+                        exit(11);
+                        }
+
+                    char gradeString[100];
+                    sprintf(gradeString, "Grade for file %s is: %d\n", fileName2, grade);
+                    write(fp, gradeString, strlen(gradeString));
+
                 }
-
+             }
              break;
+
+             
             case S_IFDIR:
                  pid_t pid_dir=fork();
                  if(pid_dir < 0){

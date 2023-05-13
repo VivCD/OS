@@ -456,6 +456,7 @@ int main(int argc, char *argv[]) {
                         } else if (nr_errors == 0 && nr_warnings > 10) {
                            grade = 2;
                         } else if (nr_errors == 0 && nr_warnings < 10) {
+                            
                            grade = 2 + 8 * (10 - nr_warnings) / 10;
                         } else if (nr_errors > 0) {
                            grade = 1;
@@ -468,6 +469,7 @@ int main(int argc, char *argv[]) {
 
                     char gradeString[100];
                     sprintf(gradeString, "Grade for file %s is: %d\n", fileName2, grade);
+                    printf("%d %d",nr_warnings,nr_errors);
                     write(fp, gradeString, strlen(gradeString));
 
                 }
@@ -555,7 +557,7 @@ int main(int argc, char *argv[]) {
                                perror("chmod failed");
                                exit(13);
                                }
-                            // exit(20);
+                             exit(20);
                         }
                     else{
                       int statusLink;

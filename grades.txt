@@ -1,1 +1,1 @@
-Grade for file warnings3.c is: 1
+Grade for file warning1.c is: 1

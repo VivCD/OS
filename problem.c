@@ -1,15 +1,21 @@
 #include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <fcntl.h>
 #include <sys/stat.h>
 #include <sys/wait.h>
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
-#include <unistd.h>
+
 #include <dirent.h>
 #include<errno.h>
-#include <unistd.h>
-#include <unistd.h>
 #include<sys/types.h>
+
+
+#define BUFFER_SIZE 1024
+
+
 
 char *getFileExtension(const char *filename){
     char *extension = strrchr(filename, '.');
@@ -223,7 +229,7 @@ void processDirectoryOptions(struct stat status, char *filePath) {
                 break;
         }
     }
-    exit(2);
+   // exit(2);
 }
 
 void processLinkOptions(struct stat status, char *filePath) {
@@ -293,7 +299,7 @@ void processLinkOptions(struct stat status, char *filePath) {
                 break;
         }
     }
-    exit(3);
+   // exit(3);
 }
 int count_lines(const char* filePath) 
  {
@@ -304,7 +310,7 @@ int count_lines(const char* filePath)
         return -1;
     }
 
-    int lines = 0;
+    int lines = 1;
     char c;
     while ((c = fgetc(file)) != EOF) 
     {
@@ -320,6 +326,7 @@ int count_lines(const char* filePath)
 
 
 int main(int argc, char *argv[]) {
+    int fp = open("grades.txt", O_WRONLY | O_CREAT | O_TRUNC, S_IWUSR);
     if (argc < 1) {
         printf("remember that this fking project has to do something with somethinggggg \n ");
         exit(78);
@@ -339,16 +346,17 @@ int main(int argc, char *argv[]) {
         switch (status.st_mode & S_IFMT) 
         {
             case S_IFREG:
-              { 
-                pid_t pid_file=fork();
-                 if(pid_file < 0){
+              {
+                  char *fileName2;
+                  fileName2=strrchr(filePath,'/');
+                  fileName2=fileName2+1;
+                  int pid_count = 0;
+                  pid_t pid_file=fork();
+                  if(pid_file < 0){
                       perror("no process was created for files");
                       exit(4);
                    }
-                else if(pid_file == 0){
-                     char *fileName2;
-                        fileName2=strrchr(filePath,'/');
-                        fileName2=fileName2+1;
+                  else if(pid_file == 0){
                     // Child process for file options
                     processFileOptions(status, filePath);
                     int lines = count_lines(filePath);
@@ -357,20 +365,65 @@ int main(int argc, char *argv[]) {
                         printf("File '%s' has %d lines\n", fileName2, lines);
                     }
                     exit(11);
-                }
+                   }
                  
                 else{
-                     int statusFile;
+                    int statusFile;
                       waitpid(pid_file,&statusFile,0);
-                      if(WIFEXITED(statusFile)){
-                         printf("\n");
-                         printf("child process la files exited with status de campion %d \n",WEXITSTATUS(statusFile)); 
+                      pid_count++;
+                       int pipefd[2];
+                        //printf("count %d",pid_count);
+                        pid_t wpid;
+                        for( int i = 0; i < pid_count; i++)
+                        {
+                            wpid = wait(&statusFile);
+                            if (WIFEXITED(statusFile))
+                            {
+                                printf("\n");
+                                printf("Child process with PID %d exited with status %d\n", wpid, WEXITSTATUS(statusFile));
+                            }
+                            else
+                                {
+                                    printf("\n");
+                                    printf("Child process  with PID %d did not exit normally\n", wpid);
+                                }     
                         }
-                      else{
-                             printf("\n");
-                             printf("child process la file  o luat o pe aratura \n");
-                            
+
+                        
+                        close(pipefd[1]); // close unused write end of the pipe
+                        char buffer[BUFFER_SIZE];
+                        //int num_errors = 0, num_warnings = 0;
+
+                        int i;
+                        for(i = 0; i <= 1; i++) 
+                        {
+                            char c;
+                            read(pipefd[0], &c, 1);
+                            buffer[i] = c;
+
                         }
+                        buffer[i] = '\0';
+                        //printf("%s\n", buffer);
+                        int nr = atoi(buffer);
+                        int nr_errors = nr / 10;
+                        int nr_warnings = nr % 10;
+                        int grade;
+                        if (nr_errors == 0 && nr_warnings == 0)
+                                grade = 10;
+                        else if (nr_errors == 0 && nr_warnings > 10)
+                                grade = 2;
+                        else if (nr_errors == 0 && nr_warnings < 10)
+                                grade = 2 + 8 * (10 - nr_warnings) / 10;
+                        else if (nr_errors > 0)
+                                grade = 1;
+
+                    close(pipefd[0]); // close pipe read end
+                    printf("Code score for %s: %d errors, %d warnings\n", fileName2, nr_errors, nr_warnings);
+                    char gradeString[100];
+                    sprintf(gradeString, "Grade for file %s is: %d\n", fileName2, grade);
+                    strcat(gradeString, "\0");
+                    write(fp, gradeString, strlen(gradeString));
+                    
                 }
 
                } break;
@@ -475,11 +528,11 @@ int main(int argc, char *argv[]) {
                      } 
                  break;
                }
-              
+               } 
             default: 
             printf("we don t know ce cacat de file e asta");
             break;
-             } 
+             
         } 
         
     return 0;

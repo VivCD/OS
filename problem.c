@@ -146,7 +146,7 @@ void processFileOptions(struct stat status, char *filePath) { // merge cu -nhsa 
                 break;
         }
     }
-   // exit(1);
+ //  exit(1);
 }
 
 void processDirectoryOptions(struct stat status, char *filePath) {
@@ -340,13 +340,12 @@ int main(int argc, char *argv[]) {
         if (lstat(filePath, &status) == -1) {
         perror("Failed to get file status.\n");
         exit(1);
-    }
+          }
 
     printf("Successfully opened %s\n", filePath);
         switch (status.st_mode & S_IFMT) 
         {
             case S_IFREG:
-              {
                   char *fileName2;
                   fileName2=strrchr(filePath,'/');
                   fileName2=fileName2+1;
@@ -354,26 +353,74 @@ int main(int argc, char *argv[]) {
                   pid_t pid_file=fork();
                   if(pid_file < 0){
                       perror("no process was created for files");
-                      exit(4);
+                      exit(2);
                    }
                   else if(pid_file == 0){
                     // Child process for file options
                     processFileOptions(status, filePath);
                     int lines = count_lines(filePath);
-                    if (lines >= 0) 
+                    if (lines >= 0 && ((fileName2-1) =="c" && (fileName2-2) ==".") )
                     {
                         printf("File '%s' has %d lines\n", fileName2, lines);
                     }
-                    exit(11);
+                    exit(3);
                    }
                  
-                else{
-                    int statusFile;
-                      waitpid(pid_file,&statusFile,0);
-                      pid_count++;
-                       int pipefd[2];
-                        //printf("count %d",pid_count);
+                  else{
+                    pid_count++;
+
+                    int pipefd[2];
+                    if (pipe(pipefd) == -1)
+                    {
+                        perror("pipe create went wrong");
+                        exit(4);
+                    }
+
+                    pid_t pid_script = fork();
+
+                    if (pid_script < 0 )
+                    {
+                        perror("there is no process created");
+                        exit(5);
+                    }
+                
+                    else if ( pid_script == 0)
+                    {
+                        if(fileName2[strlen(fileName2)-1]=='c' && fileName2[strlen(fileName2)-2]=='.')
+                        {
+
+                            if( close(pipefd[0] == -1) )
+                            {
+                                perror("error - pipe/read");
+                                exit(6);
+                            } 
+                           
+                            if (dup2(pipefd[1], STDOUT_FILENO) == -1) 
+                            {
+                                perror("error - dup2/write");
+                                exit(7);
+                            }
+
+                            char scriptname[10] = "script.sh";
+                            execlp("bash", "bash", scriptname, fileName2, NULL);
+                            exit(8);
+                        }
+                        else
+                        {
+                            int lines = count_lines(fileName2);
+                            if (lines >= 0) 
+                            {
+                                printf("File '%s' has %d lines\n", fileName2, lines);
+                            }
+                            exit(9);
+                        }
+                    }
+                    else
+                    {
+                        pid_count++;
+                        //printf("count %d",pid_count_reg);
                         pid_t wpid;
+                        int statusFile;
                         for( int i = 0; i < pid_count; i++)
                         {
                             wpid = wait(&statusFile);
@@ -389,11 +436,14 @@ int main(int argc, char *argv[]) {
                                 }     
                         }
 
-                        
-                        close(pipefd[1]); // close unused write end of the pipe
-                        char buffer[BUFFER_SIZE];
-                        //int num_errors = 0, num_warnings = 0;
+                        if( close(pipefd[1]) == -1)
+                        {
+                            perror("error - pipe/write");
+                            exit(10);
+                        } 
 
+                        char buffer[BUFFER_SIZE];
+                       
                         int i;
                         for(i = 0; i <= 1; i++) 
                         {
@@ -404,6 +454,7 @@ int main(int argc, char *argv[]) {
                         }
                         buffer[i] = '\0';
                         //printf("%s\n", buffer);
+
                         int nr = atoi(buffer);
                         int nr_errors = nr / 10;
                         int nr_warnings = nr % 10;
@@ -417,25 +468,26 @@ int main(int argc, char *argv[]) {
                         else if (nr_errors > 0)
                                 grade = 1;
 
-                    close(pipefd[0]); // close pipe read end
-                    printf("Code score for %s: %d errors, %d warnings\n", fileName2, nr_errors, nr_warnings);
-                    char gradeString[100];
-                    sprintf(gradeString, "Grade for file %s is: %d\n", fileName2, grade);
-                    strcat(gradeString, "\0");
-                    write(fp, gradeString, strlen(gradeString));
-                    
+                        if( close(pipefd[0]) )
+                        {
+                            perror("error - pipe/read");
+                            exit(11);
+                        }
+                        //printf("Code score for %s: %d errors, %d warnings\n", filename, nr_errors, nr_warnings);
+
+                        char gradeString[100];
+                        sprintf(gradeString, "Grade for file %s is: %d\n", fileName2, grade);
+                        strcat(gradeString, "\0");
+                        write(fp, gradeString, strlen(gradeString));
+                    }
                 }
 
-               } break;
-             
-        
-            
+             break;
             case S_IFDIR:
-              {
                  pid_t pid_dir=fork();
                  if(pid_dir < 0){
                       perror("no process was created for dir");
-                      exit(8);
+                      exit(12);
                    }
                  else if(pid_dir == 0){
                     // Child process for file options
@@ -445,7 +497,7 @@ int main(int argc, char *argv[]) {
                     pid_t pid_make=fork();
                     if(pid_make < 0){
                         perror("no process was created for sec child dir");
-                          exit(9);
+                          exit(13);
                      }
                     if(pid_make == 0){
                         char *dirName2;
@@ -455,7 +507,7 @@ int main(int argc, char *argv[]) {
                         char filenameDir[strlen(dirName2) + 10];
                         sprintf(filenameDir, "%s_file.txt", dirName2);
                         execlp(cmd, cmd, filenameDir, (char *) NULL);
-                        exit(9);
+                        exit(14);
                     }
                     else {
                         int statusDIR;
@@ -473,15 +525,16 @@ int main(int argc, char *argv[]) {
                     
                           
                      } 
-                   break;
-                 }
+                  
+                 
                }
+                break;
             case S_IFLNK:
-               {
+               
                  pid_t pid_link=fork();
                  if(pid_link<0){
                    perror("no process was created for links");
-                   exit(10);
+                   exit(15);
                   }
                  else if(pid_link == 0){
                     // Child process for file options
@@ -492,7 +545,7 @@ int main(int argc, char *argv[]) {
                      pid_t pid_changeAcces = fork();
                      if(pid_changeAcces<0){
                          perror("no process was created for sec child symlink");
-                          exit(11);
+                          exit(16);
                          }  
                      if(pid_changeAcces == 0){
                           // get path of target file
@@ -526,17 +579,17 @@ int main(int argc, char *argv[]) {
                         }
                     
                      } 
-                 break;
+                
                }
-               } 
+                 break;
             default: 
             printf("we don t know ce cacat de file e asta");
             break;
              
         } 
         
-    return 0;
-}
+   
+} return 0;
 }
 
 
